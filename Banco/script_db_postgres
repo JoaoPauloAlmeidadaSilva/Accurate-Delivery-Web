@@ -1,0 +1,199 @@
+/** CREATE DATABASE accurate_delivery WITH  OWNER = 'postgres' ENCODING = 'UTF8' TABLESPACE = 'pg_default' ; **/
+
+CREATE TABLE Cep_Estado (
+  codigo_estado SERIAL NOT NULL,
+  descricao_cidade VARCHAR(50) NOT NULL,
+  uf CHAR(2) NOT NULL,
+  PRIMARY KEY(codigo_estado)
+);
+
+CREATE TABLE Cep_Cidade (
+  codigo_cidade SERIAL NOT NULL,
+  codigo_estado INTEGER NOT NULL,
+  descricao_cidade CHAR(60) NOT NULL,
+  uf CHAR(2) NOT NULL,
+  codigo_ibge CHAR(7) NULL,
+  PRIMARY KEY(codigo_cidade),
+  FOREIGN KEY(codigo_estado)
+    REFERENCES Cep_Estado(codigo_estado)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION
+);
+
+CREATE TABLE Cep_Bairro (
+  codigo_bairro SERIAL NOT NULL,
+  codigo_cidade INTEGER NOT NULL,
+  nome_bairro CHAR(50) NOT NULL,
+  PRIMARY KEY(codigo_bairro),
+  FOREIGN KEY(codigo_cidade)
+    REFERENCES Cep_Cidade(codigo_cidade)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION
+);
+
+CREATE TABLE Cep_Endereco (
+  codigo_endereco SERIAL NOT NULL,
+  logradouro CHAR(50) NOT NULL,
+  numero INTEGER NOT NULL,
+  complemento CHAR(50) NULL,
+  codigo_bairro INTEGER NOT NULL,
+  cep CHAR(10) NOT NULL,
+  ponto_referencia CHAR(50) NULL,
+  last_update TIMESTAMP NOT NULL,
+  PRIMARY KEY(codigo_endereco),
+  FOREIGN KEY(codigo_bairro)
+    REFERENCES Cep_Bairro(codigo_bairro)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION
+);
+
+CREATE TABLE Pessoa (
+  codigo_pessoa SERIAL NOT NULL,
+  primeiro_nome CHAR(100) NOT NULL,
+  ultimo_nome CHAR(100) NOT NULL,
+  sexo CHAR(1) NOT NULL,
+  telefone_fixo CHAR(13) NULL,
+  telefone_celular CHAR(14) NOT NULL,
+  rg CHAR(16) NOT NULL,
+  cpf CHAR(18) NOT NULL,
+  data_nascimento DATE NOT NULL,
+  data_cadastro DATE NOT NULL,
+  email CHAR(100) NOT NULL,
+  senha_acesso CHAR(8) NOT NULL,
+  PRIMARY KEY(codigo_pessoa)
+);
+
+CREATE TABLE Pessoa_Administrador (
+  codigo_administrador SERIAL NOT NULL,
+  codigo_endereco INTEGER NOT NULL,
+  codigo_pessoa INTEGER NOT NULL,
+  nivel_acesso INTEGER NOT NULL,
+  ativo BOOL NOT NULL DEFAULT TRUE,
+  last_update TIMESTAMP NOT NULL,
+  PRIMARY KEY(codigo_administrador),
+  FOREIGN KEY(codigo_endereco)
+    REFERENCES Cep_Endereco(codigo_endereco)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION,
+  FOREIGN KEY(codigo_pessoa)
+    REFERENCES Pessoa(codigo_pessoa)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION
+);
+
+CREATE TABLE Pessoa_Cliente (
+  codigo_cliente SERIAL NOT NULL,
+  codigo_endereco INTEGER NOT NULL,
+  codigo_pessoa INTEGER NOT NULL,
+  nivel_acesso INTEGER NOT NULL,
+  ativo BOOL NOT NULL DEFAULT TRUE,
+  last_update TIMESTAMP NOT NULL,
+  PRIMARY KEY(codigo_cliente),
+  FOREIGN KEY(codigo_endereco)
+    REFERENCES Cep_Endereco(codigo_endereco)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION,
+  FOREIGN KEY(codigo_pessoa)
+    REFERENCES Pessoa(codigo_pessoa)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION
+);
+
+CREATE TABLE Pessoa_Entregador (
+  codigo_entregador SERIAL NOT NULL,
+  codigo_endereco INTEGER NOT NULL,
+  codigo_pessoa INTEGER NOT NULL,
+  nivel_acesso INTEGER NOT NULL,
+  num_registro_cng CHAR(11) NOT NULL,
+  categoria_cnh INTEGER NOT NULL,
+  validade DATE NOT NULL,
+  ativo BOOL NOT NULL DEFAULT TRUE,
+  last_update TIMESTAMP NOT NULL,
+  PRIMARY KEY(codigo_entregador),
+  FOREIGN KEY(codigo_endereco)
+    REFERENCES Cep_Endereco(codigo_endereco)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION,
+  FOREIGN KEY(codigo_pessoa)
+    REFERENCES Pessoa(codigo_pessoa)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION
+);
+
+CREATE TABLE Veiculos (
+  codigo_veiculo SERIAL NOT NULL,
+  codigo_entregador INTEGER NOT NULL,
+  veiculo_modelo CHAR(45) NOT NULL,
+  veiculo_marca VARCHAR(45) NOT NULL,
+  veiculo_ano  VARCHAR(4) NOT NULL,
+  veiculo_placa  VARCHAR(8) NOT NULL,
+  last_update TIMESTAMP NOT NULL,
+  PRIMARY KEY(codigo_veiculo),
+  FOREIGN KEY(codigo_entregador)
+    REFERENCES Pessoa_Entregador(codigo_entregador)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION
+);
+
+CREATE TABLE Encomenda (
+  codigo_encomenda SERIAL NOT NULL,
+  codigo_cliente INTEGER NOT NULL,
+  espacie CHAR(20) NOT NULL,
+  quantidade INTEGER NOT NULL,
+  peso FLOAT NOT NULL,
+  observacao CHAR(100) NULL,
+  data_registro DATE NOT NULL,
+  status_encomenda INTEGER NOT NULL,
+  PRIMARY KEY(codigo_encomenda),
+  FOREIGN KEY(codigo_cliente)
+    REFERENCES Pessoa_Cliente(codigo_cliente)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION
+);
+
+CREATE TABLE Encomenda_Endereco (
+  codigo SERIAL NOT NULL,
+  codigo_encomenda INTEGER NOT NULL,
+  codigo_endereco INTEGER NOT NULL,
+  tipo_endereco INTEGER NULL,
+  PRIMARY KEY(codigo),
+  FOREIGN KEY(codigo_endereco)
+    REFERENCES Cep_Endereco(codigo_endereco)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION,
+  FOREIGN KEY(codigo_encomenda)
+    REFERENCES Encomenda(codigo_encomenda)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION
+);
+
+CREATE TABLE Entrega (
+  codigo_entrega SERIAL NOT NULL,
+  codigo_encomenda INTEGER NOT NULL,
+  codigo_entregador INTEGER NOT NULL,
+  data_coleta TIMESTAMP NULL,
+  data_entrega TIMESTAMP NULL,
+  observacao CHAR(100) NULL,
+  PRIMARY KEY(codigo_entrega),
+  FOREIGN KEY(codigo_entregador)
+    REFERENCES Pessoa_Entregador(codigo_entregador)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION,
+  FOREIGN KEY(codigo_encomenda)
+    REFERENCES Encomenda(codigo_encomenda)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION
+);
+
+CREATE TABLE Entrega_Rastreio (
+  codigo_entrega_rastreio SERIAL NOT NULL,
+  codigo_entrega INTEGER NOT NULL,
+  status_entrega INTEGER NOT NULL,
+  last_update TIMESTAMP NOT NULL,
+  PRIMARY KEY(codigo_entrega_rastreio),
+  FOREIGN KEY(codigo_entrega)
+    REFERENCES Entrega(codigo_entrega)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION
+);
+
